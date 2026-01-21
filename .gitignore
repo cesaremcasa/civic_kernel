@@ -20,3 +20,5 @@ data/*.sqlite
 
 # OS
 .DS_Store
+*.db
+*.sqlite
