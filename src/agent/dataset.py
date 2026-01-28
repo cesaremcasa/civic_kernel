@@ -24,18 +24,27 @@ class WorldDataset(Dataset):
         grid = np.frombuffer(grid_blob, dtype=np.int64).reshape(20, 20).astype(np.float32)
         next_grid = np.frombuffer(next_grid_blob, dtype=np.int64).reshape(20, 20).astype(np.float32)
         
-        # 2. Create Agent Heatmap (Input)
+        # 2. NORMALIZATION (The Fix)
+        # Grid: 0, 1, 2 -> 0.0, 0.5, 1.0
+        grid = grid / 2.0
+        next_grid = next_grid / 2.0
+        
+        # Energy: 0 to 100 -> 0.0 to 1.0
+        ae_norm = ae / 100.0
+        nae_norm = nae / 100.0
+        
+        # 3. Create Agent Heatmap
         agent_map = np.zeros((20, 20), dtype=np.float32)
         agent_map[int(ax), int(ay)] = 1.0
         
-        # 3. One-hot Action
+        # 4. One-hot Action
         action_vec = np.zeros(6, dtype=np.float32)
         action_vec[action] = 1.0
         
         return (
-            torch.tensor(grid),           # Input: (20, 20)
-            torch.tensor(agent_map),       # Input: (20, 20)
-            torch.tensor(action_vec),      # Input: (6)
-            torch.tensor(next_grid),       # Target: (20, 20)
-            torch.tensor(nae, dtype=torch.float32) # Target: (1)
+            torch.tensor(grid),           # Input (20, 20) Normalized
+            torch.tensor(agent_map),       # Input (20, 20)
+            torch.tensor(action_vec),      # Input (6)
+            torch.tensor(next_grid),       # Target (20, 20) Normalized
+            torch.tensor(nae_norm, dtype=torch.float32) # Target (1) Normalized
         )
