@@ -2,7 +2,7 @@
 numpy==1.26.4
 pyyaml==6.0.1
 pytest==8.0.0
-tqdm==4.66.1
+tqdm==4.66.3
 
 # PyTorch (Stable for Apple Silicon M2)
 # We use the standard index versions which are pre-compiled against NumPy 1.x
