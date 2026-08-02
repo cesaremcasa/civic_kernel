@@ -1,7 +1,7 @@
 # Core Scientific Stack (Locked versions for stability)
 numpy==1.26.4
 pyyaml==6.0.1
-pytest==8.0.0
+pytest==9.0.3
 tqdm==4.66.1
 
 # PyTorch (Stable for Apple Silicon M2)
