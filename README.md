@@ -167,7 +167,6 @@ civic_kernel/
 │   │   ├── engine.py         # SimulationEngine implementation
 │   │   └── generator.py      # Trajectory data generation
 │   ├── agent/                 # Neural network layer
-│   │   ├── model.py          # WorldModelResNet architecture
 │   │   └── trainer.py        # Training loop and optimization
 │   ├── viz/                   # Validation tools
 │   │   └── inspector.py      # Visual state comparison
