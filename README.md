@@ -15,7 +15,7 @@ A deterministic, causal physics kernel for training foundational World Models. T
 
 ## Executive Summary
 
-The World Model Kernel is a minimal simulation environment designed to generate spatially and energetically consistent trajectories for training predictive models. Unlike traditional game engines that prioritize visual fidelity or gameplay mechanics, this kernel enforces fundamental physical constraints—Conservation of Energy, Spatial Locality, and Action Costs—to produce training data that reflects real-world causal relationships.
+The World Model Kernel is a minimal simulation environment designed to generate spatially and energetically consistent trajectories for training predictive models. Unlike traditional game engines that prioritize visual fidelity or gameplay mechanics, this kernel enforces fundamental physical constraints: Conservation of Energy, Spatial Locality, and Action Costs, to produce training data that reflects real-world causal relationships.
 
 **Current Achievement:** The system successfully predicts grid state transitions (S_t → S_{t+1}) with >95% spatial accuracy and 0.0091 MSE loss, demonstrating that the neural network has internalized the underlying physics rules.
 
@@ -238,5 +238,5 @@ SOFTWARE.
 
 ## Contact
 
-**Cesar Augusto**  
+**Cesar Augusto** · AI Systems Engineer, Mycellium Lab  
 Repository: [github.com/cesaremcasa/civic_kernel](https://github.com/cesaremcasa/civic_kernel)
