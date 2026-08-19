@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import numpy as np
@@ -108,3 +109,32 @@ def test_generate_train_checkpoint_reload_smoke(tmp_path):
         predicted_grid, predicted_energy = model(grid, agent_map, action)
     assert predicted_grid.shape == (1, 1, 20, 20)
     assert predicted_energy.shape == (1, 1)
+
+
+def test_seeded_generation_and_training_are_reproducible(tmp_path):
+    first_db = tmp_path / "first.db"
+    second_db = tmp_path / "second.db"
+    first_checkpoint = tmp_path / "first.pth"
+    second_checkpoint = tmp_path / "second.pth"
+
+    generate_data(num_episodes=1, db_path=str(first_db), seed=31)
+    generate_data(num_episodes=1, db_path=str(second_db), seed=31)
+
+    query = """
+        SELECT episode_id, step_count, grid, agent_pos_x, agent_pos_y,
+               agent_energy, action, reward, done, next_grid,
+               next_agent_pos_x, next_agent_pos_y, next_agent_energy
+        FROM trajectories ORDER BY id
+    """
+    with sqlite3.connect(first_db) as first_connection:
+        first_rows = first_connection.execute(query).fetchall()
+    with sqlite3.connect(second_db) as second_connection:
+        second_rows = second_connection.execute(query).fetchall()
+    assert first_rows == second_rows
+
+    train(str(first_db), epochs=1, batch_size=64, seed=31, checkpoint_path=first_checkpoint)
+    train(str(first_db), epochs=1, batch_size=64, seed=31, checkpoint_path=second_checkpoint)
+    first_state = torch.load(first_checkpoint, map_location="cpu", weights_only=True)
+    second_state = torch.load(second_checkpoint, map_location="cpu", weights_only=True)
+    assert first_state.keys() == second_state.keys()
+    assert all(torch.equal(first_state[key], second_state[key]) for key in first_state)
