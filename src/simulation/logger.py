@@ -1,14 +1,25 @@
+"""SQLite trajectory persistence."""
+
+from __future__ import annotations
+
 import sqlite3
-import numpy as np
 from pathlib import Path
-from typing import Dict, Any
+
 from kernel.state import GridState
 
+
 class TrajectoryLogger:
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str | Path):
         self.db_path = db_path
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(db_path)
         self._create_table()
+
+    def __enter__(self) -> "TrajectoryLogger":
+        return self
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+        self.close()
 
     def _create_table(self):
         cursor = self.conn.cursor()
@@ -32,12 +43,18 @@ class TrajectoryLogger:
         ''')
         self.conn.commit()
 
-    def log_step(self, episode_id: int, step: int, state: GridState, action: int, 
-                 reward: float, done: bool, next_state: GridState):
+    def log_step(
+        self,
+        episode_id: int,
+        step: int,
+        state: GridState,
+        action: int,
+        reward: float,
+        done: bool,
+        next_state: GridState,
+    ) -> None:
         cursor = self.conn.cursor()
         
-        # FIX: Use NumPy's native tobytes() instead of pickle.dumps()
-        # This is much faster and less prone to hanging issues.
         grid_blob = sqlite3.Binary(state.grid.tobytes())
         next_grid_blob = sqlite3.Binary(next_state.grid.tobytes())
         
@@ -54,5 +71,5 @@ class TrajectoryLogger:
     def commit_episode(self):
         self.conn.commit()
 
-    def close(self):
+    def close(self) -> None:
         self.conn.close()
