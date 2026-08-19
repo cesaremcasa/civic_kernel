@@ -6,16 +6,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent.dataset import WorldDataset
-from agent.models import WorldModelResNet
+from agent.trainer import load_model
 
 def visualize():
     db_path = "data/kernel_db.db"
     dataset = WorldDataset(db_path)
 
     device = torch.device("cpu")
-    model = WorldModelResNet(grid_size=20, num_actions=6).to(device)
-    model.load_state_dict(torch.load("data/checkpoints/kernel_model.pth", map_location=device))
-    model.eval()
+    model = load_model("data/checkpoints/kernel_model.pth")
 
     print("Model Loaded. Visualizing 5 samples...")
 

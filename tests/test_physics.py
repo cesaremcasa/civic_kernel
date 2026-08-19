@@ -1,72 +1,80 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from kernel.state import GridState
-from kernel.physics import PhysicsEngine, Transition
 
-def test_validate_normal_state():
-    state = GridState(str(Path(__file__).parent.parent / "config" / "constants.yaml"))
-    physics = PhysicsEngine(state.config)
-    assert physics.validate_state(state) == True
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from simulation.engine import Action, SimulationEngine, Transition
+
+
+CONFIG = Path(__file__).parent.parent / "config" / "constants.yaml"
+
+
+def test_canonical_engine_contract():
+    engine = SimulationEngine(CONFIG, seed=7)
+    assert isinstance(engine.calculate_move(0, 0), Transition)
+    assert engine.state.get_shape() == (20, 20)
+
 
 def test_move_success_deducts_energy():
-    state = GridState(str(Path(__file__).parent.parent / "config" / "constants.yaml"))
-    physics = PhysicsEngine(state.config)
-    
-    start_x, start_y = state.agent_pos
-    
-    # Find a valid move direction to avoid edge cases
-    valid_move = None
-    for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-        nx, ny = start_x + dx, start_y + dy
-        if (0 <= nx < state.GRID_SIZE and 0 <= ny < state.GRID_SIZE and 
-            state.grid[nx, ny] != physics.config['CHANNEL_WALL']):
-            valid_move = (dx, dy)
-            break
-            
-    assert valid_move is not None, "Agent is trapped in a corner/wall by bad RNG"
-    
-    trans = physics.calculate_move(state, valid_move[0], valid_move[1])
-    
-    assert trans.success == True
-    assert trans.delta_energy == -physics.COST_MOVE
-    assert trans.new_pos == (start_x + valid_move[0], start_y + valid_move[1])
+    engine = SimulationEngine(CONFIG, seed=7)
+    engine.state.grid.fill(engine.CHANNEL_EMPTY)
+    engine.state.agent_pos = (5, 5)
+    start_energy = engine.state.agent_energy
 
-def test_move_into_wall_fails():
-    state = GridState(str(Path(__file__).parent.parent / "config" / "constants.yaml"))
-    physics = PhysicsEngine(state.config)
-    
-    x, y = state.agent_pos
-    # Find a neighbor to turn into a wall
-    for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < state.GRID_SIZE and 0 <= ny < state.GRID_SIZE:
-            state.grid[nx, ny] = physics.config['CHANNEL_WALL']
-            trans = physics.calculate_move(state, dx, dy)
-            assert trans.success == False
-            assert trans.reason == 'WALL'
-            assert trans.delta_energy == 0.0 
-            return # Done
+    transition = engine.calculate_move(0, 1)
+    assert transition.success is True
+    assert transition.delta_energy == -engine.COST_MOVE
+    assert transition.new_pos == (5, 6)
+
+    state, reward, done, info = engine.step(Action.MOVE_RIGHT)
+    assert state.agent_pos == (5, 6)
+    assert state.agent_energy == start_energy - engine.COST_MOVE
+    assert reward == -engine.COST_MOVE
+    assert done is False
+    assert info["reason"] == "OK"
+
+
+def test_move_into_wall_fails_without_mutation():
+    engine = SimulationEngine(CONFIG, seed=7)
+    engine.state.agent_pos = (5, 5)
+    engine.state.grid[5, 6] = engine.CHANNEL_WALL
+    start_energy = engine.state.agent_energy
+
+    transition = engine.calculate_move(0, 1)
+    assert transition.success is False
+    assert transition.reason == "WALL"
+    assert transition.delta_energy == 0.0
+
+    state, reward, done, info = engine.step(Action.MOVE_RIGHT)
+    assert state.agent_pos == (5, 5)
+    assert state.agent_energy == start_energy
+    assert reward == 0.0
+    assert done is False
+    assert info["reason"] == "WALL"
+
 
 def test_gather_resource():
-    state = GridState(str(Path(__file__).parent.parent / "config" / "constants.yaml"))
-    physics = PhysicsEngine(state.config)
-    
-    res_amt = 20.0
-    state.resources[state.agent_pos] = res_amt
-    state.grid[state.agent_pos] = physics.config['CHANNEL_RESOURCE']
-    
-    trans = physics.calculate_gather(state)
-    
-    assert trans.success == True
-    assert trans.consumed_pos == state.agent_pos
-    assert trans.delta_energy == (-physics.COST_GATHER + res_amt)
+    engine = SimulationEngine(CONFIG, seed=7)
+    row, column = engine.state.agent_pos
+    engine.state.resources[row, column] = 20.0
+    engine.state.grid[row, column] = engine.CHANNEL_RESOURCE
+
+    transition = engine.calculate_gather()
+    assert transition.success is True
+    assert transition.consumed_pos == (row, column)
+    assert transition.delta_energy == -engine.COST_GATHER + 20.0
+
+    _, reward, done, info = engine.step(Action.GATHER)
+    assert reward == transition.delta_energy
+    assert done is False
+    assert info["reason"] == "OK"
+    assert engine.state.grid[row, column] == engine.CHANNEL_EMPTY
+    assert engine.state.resources[row, column] == 0.0
+
 
 def test_energy_floor_blocks_move():
-    state = GridState(str(Path(__file__).parent.parent / "config" / "constants.yaml"))
-    physics = PhysicsEngine(state.config)
-    state.agent_energy = 0.0
-    
-    trans = physics.calculate_move(state, 0, 1)
-    assert trans.success == False
-    assert trans.reason == 'NO_ENERGY'
+    engine = SimulationEngine(CONFIG, seed=7)
+    engine.state.agent_energy = 0.0
+    transition = engine.calculate_move(0, 1)
+    assert transition.success is False
+    assert transition.reason == "NO_ENERGY"

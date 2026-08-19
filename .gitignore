@@ -1,5 +1,7 @@
 # Python
 __pycache__/
+*.egg-info/
+.pytest_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -22,3 +24,5 @@ data/*.sqlite
 .DS_Store
 *.db
 *.sqlite
+data/checkpoints/*
+!data/checkpoints/.gitkeep
